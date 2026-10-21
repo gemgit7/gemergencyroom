@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- the letter G: a thick ring open at the right -->
+  <path d="M47.5 18.5A19 19 0 1 0 51 32" fill="none" stroke="#7c79ee" stroke-width="8" stroke-linecap="round"/>
+  <!-- the G's crossbar is a gem, with googly eyes -->
+  <polygon points="30,23 46,23 51,30 25,30" fill="#c9c7ff"/>
+  <polygon points="25,30 51,30 38,44" fill="#8f8cf5"/>
+  <polygon points="25,30 38,30 38,44" fill="#6e6be0"/>
+  <circle cx="33.5" cy="32" r="3.4" fill="#fff"/>
+  <circle cx="42.5" cy="32" r="3.4" fill="#fff"/>
+  <circle cx="34.6" cy="33.2" r="1.6" fill="#1b2133"/>
+  <circle cx="43.6" cy="33.2" r="1.6" fill="#1b2133"/>
+  <path d="M34 38.2q4 3 8 0" fill="none" stroke="#1b2133" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

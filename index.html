@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Gem-ergency Room</title>
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>
+  :root {
+    --ground:#f3f4f8; --surface:#fff; --line:#e4e7ee; --ink:#1b2133; --muted:#6b7389; --faint:#9aa1b3;
+    --accent:#5b5bd6; --accent-d:#4747b8;
+    --r-lg:20px; --r:14px; --r-sm:9px;
+    --shadow:0 1px 2px rgba(27,33,51,.05), 0 4px 12px rgba(27,33,51,.05);
+    --shadow-up:0 2px 4px rgba(27,33,51,.06), 0 12px 28px rgba(27,33,51,.12);
+  }
+  /* priority palettes: c = main, t = tint, d = readable dark shade */
+  .p-High   { --c:#e5484d; --t:#fdecec; --d:#b4232a; }
+  .p-Medium { --c:#e8a317; --t:#fdf3dc; --d:#8a5a00; }
+  .p-Low    { --c:#2fa37f; --t:#e1f5ed; --d:#176b51; }
+  .p-Done   { --c:#a3a9b8; --t:#e4e7ed; --d:#666d80; }
+
+  * { box-sizing:border-box; }
+  body { margin:0; height:100vh; display:flex; flex-direction:column; background:var(--ground); color:var(--ink);
+    font:13px/1.5 Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  button, input, textarea, select { font:inherit; color:inherit; }
+  button { cursor:pointer; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* ── top bar ── */
+  header { display:flex; align-items:center; gap:14px; padding:14px 28px; flex-wrap:wrap; }
+  .brand { display:flex; align-items:center; gap:10px; font-size:17px; font-weight:700; letter-spacing:-.02em; margin-right:8px; }
+  .eyes { width:52px; height:33px; display:block; overflow:visible; }
+  .eyes .iris { will-change:transform; }
+  .tagline { font-size:11px; font-weight:500; letter-spacing:0; color:var(--faint); margin-top:-2px; }
+  .search { display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:0 12px; height:36px; color:var(--faint); transition:border-color .15s, box-shadow .15s; }
+  .search:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px rgba(91,91,214,.15); color:var(--accent); }
+  .search input { border:none; background:none; outline:none; width:210px; height:100%; color:var(--ink); }
+  .search input::placeholder { color:var(--faint); }
+  .spacer { flex:1; }
+  .stats { display:flex; gap:6px; }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:4px 12px; color:var(--muted); font-weight:500; }
+  .stat b { color:var(--ink); font-weight:700; margin-right:3px; }
+  .stat.late b { color:#d63c42; }
+  .btn { display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 14px; border-radius:12px; border:1px solid var(--line); background:var(--surface); font-weight:600; transition:background .15s, transform .1s, box-shadow .15s; }
+  .btn:hover { background:#f8f9fc; }
+  .btn:active { transform:scale(.97); }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 4px 12px rgba(91,91,214,.35); }
+  .btn.primary:hover { background:var(--accent-d); }
+
+  /* ── board ── */
+  main { flex:1; display:flex; gap:18px; padding:4px 28px 24px; min-height:0; }
+  #left { flex:3; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px; min-width:0; }
+  #right { flex:1.05; min-width:250px; display:flex; }
+  .bucket { flex:1; display:flex; flex-direction:column; min-height:0; min-width:0; background:rgba(255,255,255,.6); border-radius:var(--r-lg); transition:background .15s, box-shadow .15s; }
+  .bucket.over { background:var(--t); box-shadow:inset 0 0 0 2px var(--c); }
+  .bucket > h2 { white-space:nowrap; margin:0; padding:18px 18px 10px; font-size:14px; font-weight:700; letter-spacing:-.01em; display:flex; align-items:center; gap:9px; }
+  .bucket > h2 .dot { width:9px; height:9px; border-radius:50%; background:var(--c); }
+  .bucket > .sub { padding:0 18px 10px; margin-top:-4px; font-size:14px; font-weight:700; letter-spacing:-.01em; color:#4d5469; }
+  .cap { flex:none; margin-left:auto; display:flex; align-items:center; gap:8px; font-weight:600; font-size:12px; color:var(--muted); }
+  .pips { display:flex; gap:3px; }
+  .pips i { width:10px; height:5px; border-radius:3px; background:var(--line); }
+  .pips i.on { background:var(--c); }
+  .bucket.full .cap { color:var(--d); }
+  .list { flex:1; overflow-y:auto; padding:4px 12px 14px; min-height:90px; }
+  .list::-webkit-scrollbar { width:8px; } .list::-webkit-scrollbar-thumb { background:#d6dae5; border-radius:8px; }
+
+  /* Done: quiet, desaturated */
+  #right .bucket { background:#e9ebf0; }
+  #right .bucket.over { background:#dfe2e9; box-shadow:inset 0 0 0 2px #a3a9b8; }
+  #right .bucket > h2 { color:#4d5469; }
+  #right .search { margin:0 14px 6px; height:32px; background:rgba(255,255,255,.7); }
+  #right .search input { width:100%; }
+
+  /* ── cards ── */
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:12px 14px 8px; margin-bottom:10px; cursor:grab;
+    box-shadow:var(--shadow); transition:transform .15s, box-shadow .15s, border-color .15s; }
+  .card:hover { transform:translateY(-2px); box-shadow:var(--shadow-up); }
+  .card:active { cursor:grabbing; }
+  .card.dragging { opacity:.4; }
+  .c-top { display:flex; align-items:center; gap:6px; margin-bottom:7px; }
+  .tag { display:inline-flex; align-items:center; gap:6px; background:var(--t); color:var(--d); font-size:11px; font-weight:600; padding:2px 10px 2px 8px; border-radius:20px; }
+  .tag i { width:6px; height:6px; border-radius:50%; background:var(--c); }
+  .late { white-space:nowrap; display:inline-flex; align-items:center; gap:4px; margin-left:auto; color:#d63c42; font-size:11px; font-weight:700; }
+  .late svg { width:15px; height:15px; stroke-width:2.6; }
+  .c-name { margin:0; font-size:14px; font-weight:600; letter-spacing:-.01em; line-height:1.35; word-break:break-word; }
+  .desc { margin:6px 0 2px; color:#4a5268; white-space:pre-wrap; word-break:break-word; }
+  .c-foot { display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:6px; color:var(--muted); font-size:12px; flex-wrap:wrap; }
+  .who { display:inline-flex; align-items:center; gap:6px; min-width:0; }
+  .av { width:20px; height:20px; border-radius:50%; background:var(--av,#dde0f7); color:#fff; font-size:9px; font-weight:700; display:grid; place-items:center; flex:none; }
+  .due { display:inline-flex; align-items:center; gap:4px; }
+  .due svg { width:14px; height:14px; }
+  .actions { margin-left:auto; display:flex; align-items:center; gap:1px; }
+  .actions button { display:grid; place-items:center; width:28px; height:28px; border:none; background:none; border-radius:8px; color:var(--faint); transition:background .15s, color .15s; }
+  .actions button:hover { background:var(--ground); color:var(--ink); }
+  .actions button[data-del]:hover { background:#fdecec; color:#d63c42; }
+  .actions svg { width:17px; height:17px; }
+  .actions button[data-exp] svg { width:20px; height:20px; stroke-width:2.6; transition:transform .2s; }
+  .actions button[data-exp].open svg { transform:rotate(180deg); }
+  .card.overdue { border:2px solid #e5484d; padding:11px 13px 7px; box-shadow:0 4px 16px rgba(229,72,77,.16); }
+  .card.overdue .due { color:#d63c42; font-weight:600; }
+
+  .card.done { background:#f6f7f9; box-shadow:none; border-color:#dde0e7; }
+  .card.done:hover { box-shadow:var(--shadow); }
+  .card.done .c-name { color:#7b8296; text-decoration:line-through; text-decoration-color:#b7bccb; font-weight:500; }
+  .card.done .tag { background:#e4e7ed; color:#7b8296; }
+  .card.done .tag i { background:#a3a9b8; }
+  .card.done .desc { color:#8a90a3; }
+  .card.done .av { background:#b3b9c7; }
+
+  .tags { display:flex; flex-wrap:wrap; gap:5px; margin:8px 0 2px; }
+  .tags span { background:#eceefb; color:#4b4fb5; font-size:11px; font-weight:500; padding:1px 9px; border-radius:20px; }
+  .tags.compact { flex-wrap:nowrap; overflow:hidden; margin:7px 0 0; }
+  .tags.compact span { max-width:96px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:none; }
+  .tags .more { background:none !important; color:var(--faint) !important; padding:1px 2px !important; }
+  .card.done .tags span { background:#e4e7ed; color:#7b8296; }
+  .tagbox { display:flex; flex-wrap:wrap; gap:6px; padding:6px 8px; border:1px solid #d6dae5; border-radius:11px; background:#fff; cursor:text; transition:border-color .15s, box-shadow .15s; }
+  .tagbox:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px rgba(91,91,214,.18); }
+  .tagbox .chip { display:inline-flex; align-items:center; gap:4px; background:#eceefb; color:#4b4fb5; font-weight:500; padding:2px 4px 2px 10px; border-radius:20px; }
+  .tagbox .chip button { border:none; background:none; color:inherit; font-size:15px; line-height:1; padding:0 4px; border-radius:50%; }
+  .tagbox .chip button:hover { background:#d9ddf7; }
+  .tagbox input { flex:1; min-width:110px; border:none !important; box-shadow:none !important; padding:4px 2px !important; outline:none; background:none; }
+  .hint { color:var(--faint); font-size:11px; margin-top:4px; }
+  .day { font-size:12px; font-weight:600; color:#6b7389; margin:14px 4px 8px; display:flex; align-items:center; gap:6px; }
+  .day svg { width:14px; height:14px; }
+  .day:first-child { margin-top:2px; }
+  .drop-marker { height:4px; background:var(--accent); border-radius:4px; margin:-2px 0 8px; }
+  .empty { border:2px dashed #d6dae5; border-radius:var(--r); color:var(--faint); text-align:center; padding:26px 10px; font-weight:500; }
+
+  /* ── dialog ── */
+  dialog { border:none; border-radius:22px; padding:0; width:min(460px, 92vw); background:var(--surface); color:var(--ink); box-shadow:0 30px 80px rgba(27,33,51,.35); }
+  dialog::backdrop { background:rgba(27,33,51,.45); backdrop-filter:blur(3px); }
+  dialog form { padding:26px; }
+  dialog h3 { margin:0 0 4px; font-size:19px; font-weight:700; letter-spacing:-.02em; }
+  dialog label.l { display:block; margin:14px 0 5px; font-size:12px; font-weight:600; color:#4a5268; }
+  dialog input[type=text], dialog input[type=date], dialog textarea { width:100%; padding:10px 12px; border:1px solid #d6dae5; border-radius:11px; background:#fff; transition:border-color .15s, box-shadow .15s; }
+  dialog input:focus, dialog textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(91,91,214,.18); }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .seg { display:flex; background:var(--ground); border-radius:12px; padding:4px; gap:4px; }
+  .seg label { flex:1; text-align:center; padding:7px 0; border-radius:9px; font-weight:600; color:var(--muted); cursor:pointer; transition:background .15s, color .15s; }
+  .seg input { position:absolute; opacity:0; pointer-events:none; }
+  .seg input:checked + span { color:#fff; }
+  .seg label:has(input:checked) { background:var(--c); color:#fff; }
+  .seg label:has(input:disabled) { opacity:.4; cursor:not-allowed; text-decoration:line-through; }
+  .seg label:has(input:focus-visible) { outline:2px solid var(--accent); }
+  dialog .row { display:flex; justify-content:flex-end; gap:8px; margin-top:22px; }
+
+  /* ── toast ── */
+  #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 18px; border-radius:30px; font-weight:600; box-shadow:var(--shadow-up); z-index:10; }
+  #toast:empty { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><svg class="eyes" id="eyes" viewBox="0 0 64 40" aria-hidden="true">
+      <defs>
+        <radialGradient id="eb" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#fff"/><stop offset=".6" stop-color="#f1f3fa"/><stop offset="1" stop-color="#c3c8de"/></radialGradient>
+        <radialGradient id="ir" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#b3b0ff"/><stop offset=".55" stop-color="#6e6be0"/><stop offset="1" stop-color="#3a37a8"/></radialGradient>
+      </defs>
+      <g transform="translate(17 19)">
+        <ellipse cx="0" cy="14.5" rx="11" ry="2" fill="#1b2133" opacity=".14"/>
+        <ellipse rx="13" ry="15.5" fill="url(#eb)"/>
+        <ellipse rx="13" ry="15.5" fill="none" stroke="#b9bed6" stroke-width=".8"/>
+        <g class="iris">
+          <circle r="7.4" fill="url(#ir)"/>
+          <circle r="3.4" fill="#10131f"/>
+          <circle cx="-2.4" cy="-3" r="2" fill="#fff" opacity=".95"/>
+          <circle cx="2.2" cy="2.6" r=".9" fill="#fff" opacity=".6"/>
+        </g>
+      </g>
+      <g transform="translate(47 19)">
+        <ellipse cx="0" cy="14.5" rx="11" ry="2" fill="#1b2133" opacity=".14"/>
+        <ellipse rx="13" ry="15.5" fill="url(#eb)"/>
+        <ellipse rx="13" ry="15.5" fill="none" stroke="#b9bed6" stroke-width=".8"/>
+        <g class="iris">
+          <circle r="7.4" fill="url(#ir)"/>
+          <circle r="3.4" fill="#10131f"/>
+          <circle cx="-2.4" cy="-3" r="2" fill="#fff" opacity=".95"/>
+          <circle cx="2.2" cy="2.6" r=".9" fill="#fff" opacity=".6"/>
+        </g>
+      </g>
+    </svg><div>The Gem-ergency Room<div class="tagline" id="tagline"></div></div></div>
+  <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="q-tasks" placeholder="Find that thing from the sync"></label>
+  <div class="spacer"></div>
+  <div class="stats" id="stats"></div>
+  <button class="btn" id="toggle-all"></button>
+  <button class="btn primary" id="add"><svg viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M12 5v14M5 12h14"/></svg>Add to plate</button>
+</header>
+<main>
+  <div id="left"></div>
+  <div id="right">
+    <section class="bucket p-Done" data-bucket="Done">
+      <h2><span class="dot"></span>Done<span class="cap" id="done-count"></span></h2>
+      <div class="sub" id="done-sub"></div>
+      <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="q-done" placeholder="Search accomplishments"></label>
+      <div class="list" id="done-list"></div>
+    </section>
+  </div>
+</main>
+<div id="toast"></div>
+
+<dialog id="dlg">
+  <form method="dialog" id="form">
+    <h3 id="dlg-title">Deliverable</h3>
+    <label class="l">Deliverable</label><input type="text" id="f-name" required placeholder="What needs doing? Be specific. Or don't.">
+    <label class="l">Description</label><textarea id="f-desc" rows="3" placeholder="Context nobody will read"></textarea>
+    <div class="grid2">
+      <div><label class="l">Stakeholder</label><input type="text" id="f-contact" placeholder="Who to blame"></div>
+      <div><label class="l">Soft deadline</label><input type="date" id="f-due"></div>
+    </div>
+    <label class="l">Tags</label>
+    <div class="tagbox" id="tagbox"><input type="text" id="f-tag" placeholder="Add a tag…" autocomplete="off"></div>
+    <div class="hint">Press Enter or comma to add. Tags can contain spaces, like &quot;q3 synergy&quot;.</div>
+    <div id="f-prio-wrap"><label class="l">Priority</label>
+      <div class="seg">
+        <label class="p-High"><input type="radio" name="prio" value="High"><span>High</span></label>
+        <label class="p-Medium"><input type="radio" name="prio" value="Medium" checked><span>Medium</span></label>
+        <label class="p-Low"><input type="radio" name="prio" value="Low"><span>Low</span></label>
+      </div></div>
+    <div class="row"><button type="button" class="btn" id="cancel">Park it</button><button class="btn primary" value="ok">Align</button></div>
+  </form>
+</dialog>
+
+<script>
+const LIMITS = { High: 3, Medium: 5, Low: null };
+const expanded = new Set();
+const LABEL = { High: 'Fire Drills', Medium: 'Important-ish', Low: 'Someday Maybe' };
+const EMPTY = {
+  High: 'Nothing on fire. Suspicious.',
+  Medium: 'Calm before the all-hands.',
+  Low: "Backlog clear. Please don't tell leadership.",
+  Done: "No wins yet. Let's take this offline.",
+};
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const DONE_THINGS = ["Award", "Raise", "Promotion", "Pizza party", "Credit", "Thank-you email", "Gold star", "Visibility", "Applause", "Bonus"];
+const DONE_STATUS = ["pending", "stuck in committee", "blocked by legal", "on the roadmap", "scheduled for Q4", "lost in email", "awaiting sign-off",
+  "circling back", "pending synergy", "TBD", "under review", "deprioritized", "lost to a reorg", "approved, not funded"];
+const TAGLINES = ['Per my last email.', 'Circling back since 2026.', "Let's double-click on that.", 'Aligning stakeholders, one drag at a time.',
+  'Moving the needle, slightly.', 'This meeting could have been a drag-and-drop.', 'Synergy, but make it sqlite.'];
+let tasks = [], dragId = null, editId = null;
+const $ = id => document.getElementById(id);
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const svg = p => `<svg viewBox="0 0 24 24">${p}</svg>`;
+const ICON = {
+  edit: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>'),
+  del: svg('<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>'),
+  chev: svg('<path d="m6 9 6 6 6-6"/>'),
+  cal: svg('<rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/>'),
+  alert: svg('<circle cx="12" cy="12" r="10"/><path d="M12 7v6"/><path d="M12 17h.01"/>'),
+  check: svg('<path d="M20 6 9 17l-5-5"/>'),
+};
+const AV = ['#6366f1', '#0ea5a4', '#d9778f', '#d08a2b', '#5b8def', '#8b6bd6'];
+const avColor = s => AV[[...s].reduce((a, ch) => a + ch.charCodeAt(0), 0) % AV.length];
+const initials = s => s.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+async function api(method, url, body) {
+  const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: body ? JSON.stringify(body) : undefined });
+  const data = await r.json();
+  if (!r.ok) { toast(data.error || 'Error'); return false; }
+  tasks = data; render(); return true;
+}
+function toast(msg) { $('toast').textContent = msg; clearTimeout(toast.t); toast.t = setTimeout(() => $('toast').textContent = '', 4000); }
+
+const match = (t, q) => !q || [t.name, t.description, t.contact, t.due, ...(t.tags || [])].join(' ').toLowerCase().includes(q.toLowerCase());
+
+/* Collapsed cards show a single tidy row (first 2 tags + "+N"); expanded cards show them all. */
+function tagsHtml(t, open) {
+  const tags = t.tags || [];
+  if (!tags.length) return '';
+  const chip = g => `<span title="${esc(g)}">${esc(g)}</span>`;
+  if (open) return `<div class="tags">${tags.map(chip).join('')}</div>`;
+  const rest = tags.slice(2);
+  return `<div class="tags compact">${tags.slice(0, 2).map(chip).join('')}${rest.length ? `<span class="more" title="${esc(rest.join(', '))}">+${rest.length}</span>` : ''}</div>`;
+}
+
+function cardHtml(t) {
+  const isDone = t.bucket === 'Done';
+  const overdue = t.due && !isDone && t.due < today();
+  const open = expanded.has(t.id);
+  return `<article class="card p-${t.priority}${overdue ? ' overdue' : ''}${isDone ? ' done' : ''}" draggable="true" data-id="${t.id}">
+    <div class="c-top"><span class="tag"><i></i>${t.priority}</span>${overdue ? `<span class="late" title="Overdue">${ICON.alert}Late. Awkward.</span>` : ''}</div>
+    <h3 class="c-name">${esc(t.name)}</h3>
+    ${t.description && open ? `<div class="desc">${esc(t.description)}</div>` : ''}
+    ${tagsHtml(t, open)}
+    <div class="c-foot">
+      ${t.contact ? `<span class="who"><span class="av" style="--av:${avColor(t.contact)}">${esc(initials(t.contact))}</span>${esc(t.contact)}</span>` : ''}
+      ${t.due ? `<span class="due">${ICON.cal}${esc(t.due)}</span>` : ''}
+      <span class="actions">
+        <button data-edit="${t.id}" title="Edit">${ICON.edit}</button>
+        <button data-del="${t.id}" title="Delete">${ICON.del}</button>
+        <button data-exp="${t.id}" class="${open ? 'open' : ''}" title="${open ? 'Collapse' : 'Expand'}">${ICON.chev}</button>
+      </span>
+    </div></article>`;
+}
+
+function render() {
+  const allOpen = tasks.length && tasks.every(t => expanded.has(t.id));
+  $('toggle-all').innerHTML = ICON.chev.replace('<svg', `<svg style="transform:rotate(${allOpen ? 180 : 0}deg)"`) + (allOpen ? 'Circle back on all' : 'Deep dive all');
+  const todayStr = today();
+  const active = tasks.filter(t => t.bucket !== 'Done');
+  const late = active.filter(t => t.due && t.due < todayStr).length;
+  $('stats').innerHTML = `<span class="stat"><b>${active.length}</b>in flight</span>` +
+    (late ? `<span class="stat late"><b>${late}</b>at risk</span>` : '') +
+    `<span class="stat"><b>${tasks.length - active.length}</b>shipped</span>`;
+
+  const qt = $('q-tasks').value, qd = $('q-done').value;
+  $('left').innerHTML = ['High','Medium','Low'].map(b => {
+    const all = tasks.filter(t => t.bucket === b), shown = all.filter(t => match(t, qt));
+    const lim = LIMITS[b];
+    const cap = lim
+      ? `<span class="pips">${Array.from({length: lim}, (_, i) => `<i class="${i < all.length ? 'on' : ''}"></i>`).join('')}</span>${all.length}/${lim}`
+      : `${all.length}`;
+    return `<section class="bucket p-${b} ${lim && all.length >= lim ? 'full' : ''}" data-bucket="${b}">
+      <h2><span class="dot"></span>${LABEL[b]}<span class="cap" title="${lim ? (all.length >= lim ? 'At capacity. Please descope.' : 'Capacity: ' + lim + '. Choose wisely.') : 'Unlimited, like the optimism.'}">${cap}</span></h2>
+      <div class="list">${shown.map(cardHtml).join('') || `<div class="empty">${EMPTY[b]}</div>`}</div></section>`;
+  }).join('');
+
+  const done = tasks.filter(t => t.bucket === 'Done').sort((a,b) => b.done_at.localeCompare(a.done_at) || b.id - a.id);
+  const groups = {};
+  done.filter(t => match(t, qd)).forEach(t => (groups[t.done_at.slice(0,10)] ||= []).push(t));
+  $('done-count').textContent = done.length;
+  $('done-list').innerHTML = Object.keys(groups).sort().reverse().map(d =>
+      `<div class="day">${ICON.check}${new Date(d + 'T00:00').toLocaleDateString(undefined, {weekday:'short', year:'numeric', month:'short', day:'numeric'})}</div>` +
+      groups[d].map(cardHtml).join('')).join('') || `<div class="empty">${EMPTY.Done}</div>`;
+}
+
+/* drag & drop (delegated) */
+function afterElement(list, y) {
+  const els = [...list.querySelectorAll('.card:not(.dragging)')];
+  return els.find(el => { const r = el.getBoundingClientRect(); return y < r.top + r.height / 2; }) || null;
+}
+function clearMarkers() { document.querySelectorAll('.drop-marker').forEach(m => m.remove()); document.querySelectorAll('.over').forEach(b => b.classList.remove('over')); }
+
+document.addEventListener('dragstart', e => {
+  const card = e.target.closest?.('.card'); if (!card) return;
+  dragId = +card.dataset.id; card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragId);
+});
+document.addEventListener('dragend', () => { dragId = null; clearMarkers(); document.querySelectorAll('.dragging').forEach(c => c.classList.remove('dragging')); });
+document.addEventListener('dragover', e => {
+  const bucket = e.target.closest?.('.bucket'); if (!bucket || dragId == null) return;
+  e.preventDefault();
+  clearMarkers(); bucket.classList.add('over');
+  const list = bucket.querySelector('.list'), after = afterElement(list, e.clientY);
+  const marker = document.createElement('div'); marker.className = 'drop-marker';
+  // In Done, order is by date, so no insertion marker there.
+  if (bucket.dataset.bucket !== 'Done') after ? list.insertBefore(marker, after) : list.appendChild(marker);
+});
+document.addEventListener('drop', async e => {
+  const bucket = e.target.closest?.('.bucket'); if (!bucket || dragId == null) return;
+  e.preventDefault();
+  const list = bucket.querySelector('.list'), after = afterElement(list, e.clientY);
+  const id = dragId; clearMarkers();
+  await api('POST', '/api/move', { id, bucket: bucket.dataset.bucket, before: after ? +after.dataset.id : null });
+});
+
+/* add / edit / delete */
+document.addEventListener('click', async e => {
+  const ex = e.target.closest('[data-exp]');
+  if (ex) { const id = +ex.dataset.exp; expanded.has(id) ? expanded.delete(id) : expanded.add(id); render(); return; }
+  const ed = e.target.closest('[data-edit]'), del = e.target.closest('[data-del]');
+  if (ed) openDialog(tasks.find(t => t.id === +ed.dataset.edit));
+  if (del && confirm('Sunset this task, effective immediately?')) api('DELETE', '/api/tasks/' + del.dataset.del);
+});
+document.addEventListener('dblclick', e => {
+  const card = e.target.closest('.card');
+  if (card && !e.target.closest('button')) openDialog(tasks.find(t => t.id === +card.dataset.id));
+});
+/* tag chips input */
+let formTags = [];
+function renderChips() {
+  const box = $('tagbox');
+  box.querySelectorAll('.chip').forEach(c => c.remove());
+  formTags.forEach((g, i) => {
+    const chip = document.createElement('span'); chip.className = 'chip';
+    chip.append(g);
+    const x = document.createElement('button'); x.type = 'button'; x.title = 'Remove'; x.textContent = '×';
+    x.onclick = () => { formTags.splice(i, 1); renderChips(); $('f-tag').focus(); };
+    chip.append(x); box.insertBefore(chip, $('f-tag'));
+  });
+}
+function addTags(text) {
+  for (const part of text.split(',')) {
+    const t = part.replace(/\s+/g, ' ').trim().slice(0, 30);
+    if (t && formTags.length < 10 && !formTags.some(g => g.toLowerCase() === t.toLowerCase())) formTags.push(t);
+  }
+  renderChips();
+}
+$('tagbox').onclick = () => $('f-tag').focus();
+$('f-tag').addEventListener('keydown', e => {
+  const inp = e.target;
+  if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTags(inp.value); inp.value = ''; }
+  else if (e.key === 'Backspace' && !inp.value && formTags.length) { formTags.pop(); renderChips(); }
+});
+$('f-tag').addEventListener('input', e => {   // pasted "a, b, c"
+  if (e.target.value.includes(',')) { addTags(e.target.value); e.target.value = ''; }
+});
+$('f-tag').addEventListener('blur', e => { addTags(e.target.value); e.target.value = ''; });
+
+function openDialog(t) {
+  formTags = [...(t?.tags || [])]; $('f-tag').value = ''; renderChips();
+  editId = t ? t.id : null;
+  $('dlg-title').textContent = t ? 'Revisit deliverable' : 'New deliverable';
+  $('f-name').value = t?.name || ''; $('f-desc').value = t?.description || '';
+  $('f-contact').value = t?.contact || ''; $('f-due').value = t ? (t.due || '') : today();
+  $('f-prio-wrap').style.display = t ? 'none' : '';
+  // Disable priorities whose bucket is full; default to the first one still open.
+  const open = {};
+  document.querySelectorAll('input[name=prio]').forEach(r => {
+    const lim = LIMITS[r.value];
+    r.disabled = lim != null && tasks.filter(x => x.bucket === r.value).length >= lim;
+    open[r.value] = !r.disabled;
+  });
+  const pick = ['Medium', 'High', 'Low'].find(v => open[v]);
+  document.querySelector(`input[name=prio][value=${pick}]`).checked = true;
+  $('dlg').showModal();
+}
+$('toggle-all').onclick = () => {
+  if (tasks.length && tasks.every(t => expanded.has(t.id))) expanded.clear();
+  else tasks.forEach(t => expanded.add(t.id));
+  render();
+};
+$('add').onclick = () => openDialog(null);
+$('cancel').onclick = () => $('dlg').close();
+$('form').addEventListener('submit', e => {
+  if (e.submitter?.value !== 'ok') return;
+  addTags($('f-tag').value); $('f-tag').value = '';
+  const body = { tags: formTags, name: $('f-name').value.trim(), description: $('f-desc').value.trim(), contact: $('f-contact').value.trim(), due: $('f-due').value.trim() };
+  if (editId) api('PUT', '/api/tasks/' + editId, body);
+  else api('POST', '/api/tasks', { ...body, priority: document.querySelector('input[name=prio]:checked').value });
+});
+$('q-tasks').oninput = $('q-done').oninput = render;
+
+/* eyes follow the cursor */
+const irises = [...document.querySelectorAll('#eyes .iris')];
+const look = (x, y) => irises.forEach(el => {
+  const g = el.parentNode.getBoundingClientRect();
+  const cx = g.left + g.width / 2, cy = g.top + g.height / 2;
+  const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy) || 1, k = Math.min(d / 120, 1);
+  // travel is limited to the eyeball's inner ellipse (in viewBox units)
+  el.setAttribute('transform', `translate(${(dx / d) * k * 5.2} ${(dy / d) * k * 7})`);
+});
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.addEventListener('mousemove', e => look(e.clientX, e.clientY));
+  document.addEventListener('mouseleave', () => irises.forEach(el => el.setAttribute('transform', '')));
+}
+{ const l = `${pick(DONE_THINGS)} ${pick(DONE_STATUS)}`;
+  $('done-sub').textContent = `(${l})`; }
+$('tagline').textContent = TAGLINES[Math.floor(Math.random() * TAGLINES.length)];
+api('GET', '/api/tasks');
+</script>
+</body>
+</html>
